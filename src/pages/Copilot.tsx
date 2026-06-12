@@ -84,10 +84,12 @@ export default function Copilot() {
     else submitRefinement(input)
   }
 
-  // Pre-fill from a postmortem "Create this campaign" hand-off.
+  // Pre-fill from a postmortem / audience "Create this campaign" hand-off.
   const prefill = (location.state as { goal?: string } | null)?.goal
+  const prefilled = useRef(false)
   useEffect(() => {
-    if (prefill) {
+    if (prefill && !prefilled.current) {
+      prefilled.current = true
       submitGoal(prefill)
       navigate(location.pathname, { replace: true, state: null })
     }
