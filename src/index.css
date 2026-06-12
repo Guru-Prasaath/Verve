@@ -1,0 +1,172 @@
+@import 'tailwindcss';
+
+/*
+  Pulse design system — "Daybreak Coffee"
+  Espresso (#5A3A22) + Amber (#E0A458) accent on a warm-neutral base.
+  Tokens are defined as raw CSS custom properties and surfaced to Tailwind
+  utilities via @theme inline, so dark mode can later be added by overriding
+  the same variables under a .dark scope without touching components.
+*/
+
+:root {
+  /* warm neutral base */
+  --background: #faf8f5;
+  --surface: #ffffff;
+  --surface-muted: #f5f1ec;
+  --foreground: #1c1917;
+  --muted-foreground: #78716c;
+  --border: #e9e2d9;
+  --border-strong: #ddd3c6;
+
+  /* espresso primary */
+  --primary: #5a3a22;
+  --primary-hover: #4a2f1b;
+  --primary-foreground: #fdf9f3;
+
+  /* amber accent */
+  --accent: #e0a458;
+  --accent-hover: #d2944a;
+  --accent-soft: #f6ead6;
+  --accent-foreground: #3d2814;
+
+  /* status palette */
+  --success: #2f8f5b;
+  --success-soft: #e3f3ea;
+  --warning: #c98a2b;
+  --warning-soft: #faf0db;
+  --danger: #c0492f;
+  --danger-soft: #f8e7e2;
+  --info: #3a6ea5;
+  --info-soft: #e6eef6;
+
+  --ring: #e0a458;
+  --radius: 0.75rem;
+
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: var(--foreground);
+  background-color: var(--background);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  --color-ring: var(--ring);
+
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-display: 'Fraunces', 'Inter', serif;
+
+  --radius-sm: calc(var(--radius) - 0.35rem);
+  --radius-md: calc(var(--radius) - 0.15rem);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 0.35rem);
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+/* ---- utilities & keyframes ---- */
+
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+/* agent "thinking" shimmer */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(224, 164, 88, 0.18),
+    transparent
+  );
+  animation: shimmer 1.6s infinite;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-in-up {
+  animation: fade-in-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.thinking-dot {
+  animation: pulse-dot 1.2s infinite ease-in-out;
+}
+
+/* thin, warm scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+}
