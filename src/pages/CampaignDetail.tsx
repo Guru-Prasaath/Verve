@@ -41,7 +41,8 @@ export default function CampaignDetail() {
 
     setDeleting(true)
     try {
-      const response = await fetch(`/api/campaigns/${id}`, { method: 'DELETE' })
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+      const response = await fetch(`${baseUrl}/campaigns/${id}`, { method: 'DELETE' })
       if (response.ok) {
         navigate('/campaigns')
       } else {
