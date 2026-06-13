@@ -5,7 +5,7 @@ import * as path from 'path'
 import { createClient } from '@supabase/supabase-js'
 import { planWithLLM, LLM_ENABLED, LLM_MODEL } from './agentPlanner'
 import { fetchFilteredCustomers, getTopCities } from './db/queries'
-import { checkAudienceOverlap, analyzeCohort } from './helpers/audience'
+import { analyzeCohort } from './helpers/audience'
 
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '../.env') })
@@ -548,16 +548,6 @@ app.get('/campaigns/:id', async (req, res) => {
     orderValue: r.order_value,
   }))
 
-  const recipientIds = recipients.map(r => r.customerId)
-  const { overlapCount, overlapPercentage } = await checkAudienceOverlap(supabase, id, recipientIds)
-
-  const dedupWarning = overlapCount > 0 ? {
-    enabled: true,
-    overlapCount,
-    overlapPercentage,
-    message: `${overlapCount} recipient(s) (${overlapPercentage}%) are already in other active campaigns. Consider deduplicating to avoid over-messaging.`
-  } : null
-
   res.json({
     id: campaign.id,
     title: campaign.title,
@@ -573,7 +563,6 @@ app.get('/campaigns/:id', async (req, res) => {
     failures: campaign.failures,
     attributedRevenue: campaign.attributed_revenue,
     recipients,
-    dedupWarning,
   })
 })
 

@@ -699,7 +699,6 @@ export function buildCampaignDetail(id: string): CampaignDetail | undefined {
     failures: makeFailures(m.sent, m.delivered),
     attributedRevenue: m.revenue,
     recipients: buildRecipients(def, c),
-    dedupWarning: null,
   }
 }
 
@@ -877,7 +876,6 @@ export function launchPlan(plan: CampaignPlan): Campaign {
     failures: makeFailures(m.sent, m.delivered),
     attributedRevenue: m.revenue,
     recipients,
-    dedupWarning: null,
   }
 
   RUNTIME_POSTMORTEMS[id] = {

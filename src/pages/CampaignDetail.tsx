@@ -2,7 +2,6 @@ import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import {
   ArrowLeft,
-  AlertCircle,
   Trash2,
   IndianRupee,
   MousePointerClick,
@@ -109,18 +108,6 @@ export default function CampaignDetail() {
           </button>
         </div>
       </div>
-
-      {data.dedupWarning && (
-        <div className="mt-4 flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/5 p-4">
-          <AlertCircle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-foreground">Audience overlap detected</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {data.dedupWarning.message}
-            </p>
-          </div>
-        </div>
-      )}
 
       <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <MetricCard

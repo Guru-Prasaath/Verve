@@ -196,13 +196,6 @@ export const RecipientSchema = z.object({
 })
 export type Recipient = z.infer<typeof RecipientSchema>
 
-export const DedupWarningSchema = z.object({
-  enabled: z.boolean(),
-  overlapCount: z.number(),
-  overlapPercentage: z.number(),
-  message: z.string(),
-}).nullable()
-
 export const CampaignDetailSchema = CampaignSchema.extend({
   funnel: z.array(FunnelStageSchema),
   failures: z.array(FailureBreakdownSchema),
@@ -210,7 +203,6 @@ export const CampaignDetailSchema = CampaignSchema.extend({
   recipients: z.array(RecipientSchema),
   filter: AudienceFilterSchema,
   persona: z.string(),
-  dedupWarning: DedupWarningSchema,
 })
 export type CampaignDetail = z.infer<typeof CampaignDetailSchema>
 
