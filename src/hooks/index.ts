@@ -31,6 +31,10 @@ export function useCampaign(id: string) {
     queryKey: queryKeys.campaign(id),
     queryFn: () => api.getCampaign(id),
     enabled: !!id,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status
+      return status === 'Live' || status === 'Sending' ? 1000 : false
+    },
   })
 }
 
