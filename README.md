@@ -62,14 +62,16 @@ attribution window so trickling opens/clicks are captured before polling stops.
 
 ## AI-native planning
 
-`POST /agent/plan` uses **Claude (`claude-opus-4-8`)** to turn the marketer's
-natural-language goal into a *structured* plan — a compiled audience filter, the recommended
-channel + reasoning, per-channel copy, and guardrails
-([`backend/src/agentPlanner.ts`](backend/src/agentPlanner.ts)). The CRM then applies that
-filter to the **real customer table**, so the audience count is genuinely derived, not
-invented. If `ANTHROPIC_API_KEY` is unset (or the model output fails validation), it
-**transparently falls back** to a deterministic keyword compiler — the demo always works.
-The response carries `source: "ai" | "keyword"` for transparency.
+`POST /agent/plan` uses an **LLM (Groq — `llama-3.3-70b-versatile` by default, via its
+OpenAI-compatible API)** to turn the marketer's natural-language goal into a *structured*
+plan — a compiled audience filter, the recommended channel + reasoning, per-channel copy,
+and guardrails ([`backend/src/agentPlanner.ts`](backend/src/agentPlanner.ts)). The model is
+forced into JSON mode and its output is **validated with Zod** before the app trusts it. The
+CRM then applies that filter to the **real customer table**, so the audience count is
+genuinely derived, not invented. If `GROQ_API_KEY` is unset (or the model output fails
+validation), it **transparently falls back** to a deterministic keyword compiler — the demo
+always works. The response carries `source: "ai" | "keyword"` for transparency. The model is
+overridable via `GROQ_MODEL` with no code changes.
 
 ## Running locally
 

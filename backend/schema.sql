@@ -4,6 +4,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Drop tables if they exist (clean setup)
+DROP TABLE IF EXISTS orders CASCADE;
 DROP TABLE IF EXISTS recipients CASCADE;
 DROP TABLE IF EXISTS campaigns CASCADE;
 DROP TABLE IF EXISTS audiences CASCADE;
@@ -65,7 +66,26 @@ CREATE TABLE recipients (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- 5. Orders Table — individual purchases. The customer aggregate columns
+-- (lifetime_value, total_orders, days_since_last_order) are DERIVED from these
+-- rows at seed/ingest time, so they are provable, not invented. A campaign-driven
+-- purchase writes a row here with campaign_id set — that is the literal
+-- "this order came because of this communication" attribution link.
+CREATE TABLE orders (
+    id TEXT PRIMARY KEY,
+    customer_id TEXT REFERENCES customers(id) ON DELETE CASCADE,
+    amount INTEGER NOT NULL,            -- order value in ₹
+    drink TEXT NOT NULL,
+    store TEXT NOT NULL,
+    ordered_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    campaign_id TEXT REFERENCES campaigns(id) ON DELETE SET NULL, -- NULL = organic
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- Create indexes for performance on foreign keys and search paths
+CREATE INDEX idx_orders_customer_id ON orders(customer_id);
+CREATE INDEX idx_orders_campaign_id ON orders(campaign_id);
+CREATE INDEX idx_orders_ordered_at ON orders(ordered_at);
 CREATE INDEX idx_recipients_campaign_id ON recipients(campaign_id);
 CREATE INDEX idx_recipients_customer_id ON recipients(customer_id);
 CREATE INDEX idx_recipients_state ON recipients(state);

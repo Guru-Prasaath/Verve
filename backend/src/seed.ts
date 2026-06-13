@@ -80,9 +80,19 @@ function weightedCity(rng: () => number): typeof CITIES[number] {
   return 'Bengaluru'
 }
 
-function generateCustomers() {
+// Build customers AND their order history together. Orders are the source of
+// truth: each customer's lifetime_value / total_orders / days_since_last_order
+// are DERIVED by summing/counting their generated orders, so the aggregates the
+// UI shows are provably backed by real rows (and "this order came from this
+// communication" can be a genuine foreign-key link, not a number on a recipient).
+function generateData() {
   const rng = mulberry32(42)
-  const out = []
+  const customers: any[] = []
+  const orders: any[] = []
+  const now = Date.now()
+  const DAY = 86_400_000
+  let orderSeq = 0
+
   for (let i = 0; i < 2000; i++) {
     const city = weightedCity(rng)
     const store = pick(rng, OUTLETS_BY_CITY[city])
@@ -92,39 +102,68 @@ function generateCustomers() {
     const timeHabit = pick(rng, [
       'morning-office', 'morning-office', 'afternoon', 'weekend', 'weekend',
     ])
-    const base = frequency === 'daily' ? 9000 : frequency === 'weekly' ? 4500 : 1800
-    const lifetimeValue = Math.round(base + rng() * base * 1.4)
+    const favoriteDrink = pick(rng, DRINKS)
     const lapsed = rng() < 0.32
     const daysSinceLastOrder = lapsed
       ? 60 + Math.floor(rng() * 130)
       : Math.floor(rng() * 45)
-    const totalOrders = Math.max(
-      1,
-      Math.round(lifetimeValue / (220 + rng() * 120))
-    )
-    out.push({
+
+    // How many past orders, and the typical gap between them, by frequency.
+    const orderCount =
+      frequency === 'daily'
+        ? 20 + Math.floor(rng() * 30) // 20–49
+        : frequency === 'weekly'
+          ? 8 + Math.floor(rng() * 16) // 8–23
+          : 2 + Math.floor(rng() * 7) // 2–8
+    const gapDays = frequency === 'daily' ? 2 : frequency === 'weekly' ? 9 : 30
+
+    // Walk backwards from the most recent order (daysSinceLastOrder ago).
+    let dayCursor = daysSinceLastOrder
+    let lifetimeValue = 0
+    for (let j = 0; j < orderCount; j++) {
+      const amount = 180 + Math.floor(rng() * 300) // ₹180–₹479
+      lifetimeValue += amount
+      orders.push({
+        id: `o${++orderSeq}`,
+        customer_id: `c${i + 1}`,
+        amount,
+        // mostly the usual, occasionally something else
+        drink: rng() < 0.75 ? favoriteDrink : pick(rng, DRINKS),
+        store: store.name,
+        ordered_at: new Date(now - dayCursor * DAY).toISOString(),
+        campaign_id: null,
+      })
+      dayCursor += Math.max(1, Math.round(gapDays * (0.5 + rng())))
+    }
+
+    customers.push({
       id: `c${i + 1}`,
       name: `${pick(rng, FIRST_NAMES)} ${pick(rng, LAST_NAMES)}`,
       city,
       home_store: store.name,
-      favorite_drink: pick(rng, DRINKS),
+      favorite_drink: favoriteDrink,
       frequency,
       time_habit: timeHabit,
+      // derived from the order rows above
       lifetime_value: lifetimeValue,
       days_since_last_order: daysSinceLastOrder,
-      total_orders: totalOrders,
+      total_orders: orderCount,
     })
   }
-  return out
+
+  return { customers, orders }
 }
 
 async function runSeed() {
   console.log('🌱 Starting Supabase Seeding...')
 
-  const customers = generateCustomers()
-  console.log(`Generated ${customers.length} customers. Cleaning up old tables...`)
+  const { customers, orders } = generateData()
+  console.log(`Generated ${customers.length} customers + ${orders.length} orders. Cleaning up old tables...`)
 
-  // Clear existing customer data
+  // Clear existing data. Delete orders first (FK → customers), then customers.
+  // (Deleting customers cascades, but we're explicit so a missing orders table
+  // surfaces clearly rather than failing the cascade silently.)
+  await supabase.from('orders').delete().neq('id', '')
   const { error: deleteError } = await supabase.from('customers').delete().neq('id', '')
   if (deleteError) {
     console.error('Error clearing old customers:', deleteError)
@@ -141,6 +180,20 @@ async function runSeed() {
       process.exit(1)
     }
     console.log(`Successfully inserted customers ${i + 1} to ${Math.min(i + chunkSize, customers.length)}`)
+  }
+
+  // Insert orders in chunks of 1000 (customers must exist first for the FK).
+  console.log(`Inserting ${orders.length} orders...`)
+  const orderChunk = 1000
+  for (let i = 0; i < orders.length; i += orderChunk) {
+    const chunk = orders.slice(i, i + orderChunk)
+    const { error } = await supabase.from('orders').insert(chunk)
+    if (error) {
+      console.error(`Error inserting orders ${i} to ${i + orderChunk}:`, error)
+      console.error('Did you run migrations/002_add_orders.sql (or schema.sql) first?')
+      process.exit(1)
+    }
+    console.log(`Successfully inserted orders ${i + 1} to ${Math.min(i + orderChunk, orders.length)}`)
   }
 
   console.log('Seeding pre-built audiences...')

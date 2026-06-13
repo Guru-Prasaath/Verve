@@ -1,23 +1,35 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
+import * as dotenv from 'dotenv'
+import * as path from 'path'
+
+// Load .env here too: this module's top-level code runs during server.ts's
+// import phase, BEFORE server.ts calls dotenv.config(), so we can't rely on it
+// having loaded the key yet. dotenv.config() is idempotent — safe to call twice.
+dotenv.config({ path: path.join(__dirname, '../.env') })
 
 /*
  * AI planning layer. Turns a marketer's natural-language goal into a STRUCTURED
- * campaign plan using Claude. The model decides the audience filter, the
- * recommended channel + reasoning, the per-channel copy, and the guardrails —
- * the CRM then applies that filter to the real customer database so the audience
- * count is genuinely derived, not invented.
+ * campaign plan using an LLM (Groq, via its OpenAI-compatible API). The model
+ * decides the audience filter, the recommended channel + reasoning, the
+ * per-channel copy, and the guardrails — the CRM then applies that filter to the
+ * real customer database so the audience count is genuinely derived, not invented.
  *
- * If ANTHROPIC_API_KEY is unset or the call fails/validates wrong, the caller
- * falls back to the deterministic keyword compiler — the demo always works.
+ * If GROQ_API_KEY is unset, or the call fails, or the output doesn't validate,
+ * the caller falls back to the deterministic keyword compiler — the demo always
+ * works. Only the transport here is provider-specific; the schema, validation,
+ * prompt and fallback are provider-agnostic.
  */
 
-const apiKey = process.env.ANTHROPIC_API_KEY
-const client = apiKey ? new Anthropic({ apiKey }) : null
+const apiKey = process.env.GROQ_API_KEY
+// Overridable so you can swap models (e.g. openai/gpt-oss-120b,
+// moonshotai/kimi-k2-instruct) without touching code.
+const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
 
-export const LLM_ENABLED = !!client
+export const LLM_ENABLED = !!apiKey
+export const LLM_MODEL = GROQ_MODEL
 
-// The shape we ask Claude to return. Validated before we trust it.
+// The shape we ask the model to return. Validated before we trust it.
 const LLMPlanSchema = z.object({
   title: z.string(),
   audienceDescriptor: z.string(),
@@ -99,27 +111,46 @@ function extractJson(text: string): unknown {
 }
 
 /** Returns a validated LLM plan, or null to signal "use the keyword fallback". */
-export async function planWithClaude(
+export async function planWithLLM(
   goal: string,
   refinements: string[] = []
 ): Promise<LLMPlan | null> {
-  if (!client) return null
+  if (!apiKey) return null
 
   const userText =
     `Goal: ${goal}` +
     (refinements.length ? `\nRefinements: ${refinements.join('; ')}` : '')
 
   try {
-    const res = await client.messages.create({
-      model: 'claude-opus-4-8',
-      max_tokens: 1500,
-      system: SYSTEM,
-      messages: [{ role: 'user', content: userText }],
+    const res = await fetch(GROQ_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        temperature: 0.7,
+        max_tokens: 1500,
+        // Force valid JSON back (Groq supports OpenAI-style JSON mode).
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: SYSTEM },
+          { role: 'user', content: userText },
+        ],
+      }),
     })
-    const textBlock = res.content.find((b) => b.type === 'text')
-    if (!textBlock || textBlock.type !== 'text') return null
-    const parsed = LLMPlanSchema.parse(extractJson(textBlock.text))
-    return parsed
+
+    if (!res.ok) {
+      console.error('[agentPlanner] Groq HTTP error', res.status, await res.text())
+      return null
+    }
+
+    const data: any = await res.json()
+    const content: string | undefined = data?.choices?.[0]?.message?.content
+    if (!content) return null
+
+    return LLMPlanSchema.parse(extractJson(content))
   } catch (err) {
     console.error('[agentPlanner] LLM plan failed, falling back to keyword compiler:', err)
     return null

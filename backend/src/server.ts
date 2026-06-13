@@ -3,7 +3,7 @@ import cors from 'cors'
 import * as dotenv from 'dotenv'
 import * as path from 'path'
 import { createClient } from '@supabase/supabase-js'
-import { planWithClaude, LLM_ENABLED } from './agentPlanner'
+import { planWithLLM, LLM_ENABLED, LLM_MODEL } from './agentPlanner'
 
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '../.env') })
@@ -168,6 +168,69 @@ app.post('/customers/ingest', async (req, res) => {
   if (error) {
     return res.status(500).json({ error: error.message })
   }
+
+  res.json({ success: true, count: dbRows.length })
+})
+
+// Recompute a customer's aggregate columns from their order rows, so
+// lifetime_value / total_orders / days_since_last_order always reflect reality.
+async function recomputeCustomerAggregates(customerIds: string[]) {
+  const DAY = 86_400_000
+  for (const customerId of [...new Set(customerIds)]) {
+    const { data: rows, error } = await supabase
+      .from('orders')
+      .select('amount, ordered_at')
+      .eq('customer_id', customerId)
+    if (error || !rows) continue
+
+    const totalOrders = rows.length
+    const lifetimeValue = rows.reduce((s: number, r: any) => s + (r.amount || 0), 0)
+    const lastOrderMs = rows.reduce(
+      (max: number, r: any) => Math.max(max, new Date(r.ordered_at).getTime()),
+      0
+    )
+    const daysSinceLastOrder =
+      lastOrderMs > 0 ? Math.floor((Date.now() - lastOrderMs) / DAY) : 0
+
+    await supabase
+      .from('customers')
+      .update({
+        total_orders: totalOrders,
+        lifetime_value: lifetimeValue,
+        days_since_last_order: daysSinceLastOrder,
+      })
+      .eq('id', customerId)
+  }
+}
+
+// 2b. POST /orders/ingest — ingest individual orders (customers + their orders).
+// Upserts the order rows, then re-derives the affected customers' aggregates so
+// LTV / order count / recency stay consistent with the orders on record.
+app.post('/orders/ingest', async (req, res) => {
+  const dataset = req.body // Expecting Order[] JSON array
+  if (!Array.isArray(dataset)) {
+    return res.status(400).json({ error: 'Body must be a JSON array of orders' })
+  }
+
+  console.log(`[CRM Backend] Ingesting ${dataset.length} orders into Supabase...`)
+
+  const dbRows = dataset.map((o: any) => ({
+    id: o.id || `ord_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    customer_id: o.customerId,
+    amount: Number(o.amount) || 0,
+    drink: o.drink,
+    store: o.store,
+    ordered_at: o.orderedAt || new Date().toISOString(),
+    campaign_id: o.campaignId ?? null,
+  }))
+
+  const { error } = await supabase.from('orders').upsert(dbRows)
+  if (error) {
+    return res.status(500).json({ error: error.message })
+  }
+
+  // Keep the customer aggregates honest after ingest.
+  await recomputeCustomerAggregates(dbRows.map((r) => r.customer_id).filter(Boolean))
 
   res.json({ success: true, count: dbRows.length })
 })
@@ -355,7 +418,7 @@ app.post('/agent/plan', async (req, res) => {
   let shorten = false
   let source: 'ai' | 'keyword' = 'keyword'
 
-  const llm = await planWithClaude(goal, refinements)
+  const llm = await planWithLLM(goal, refinements)
 
   if (llm) {
     source = 'ai'
@@ -689,7 +752,7 @@ app.post('/api/campaigns/:id/receipt', async (req, res) => {
   // lifecycle rank is derived from the state string (1:1), so no extra column.
   const { data: current, error: curErr } = await supabase
     .from('recipients')
-    .select('state')
+    .select('state, customer_id, name')
     .eq('id', recipientId)
     .single()
 
@@ -723,6 +786,26 @@ app.post('/api/campaigns/:id/receipt', async (req, res) => {
       if (state === 'Ordered') update.order_value = orderValue
       await supabase.from('recipients').update(update).eq('id', recipientId)
       applied = true
+
+      // Attribution: a conversion writes a REAL order row linked to this
+      // campaign — the genuine "this order came because of this communication".
+      // Best-effort so the loop still works if the orders table isn't migrated.
+      if (state === 'Ordered' && current.customer_id) {
+        const { data: cust } = await supabase
+          .from('customers')
+          .select('favorite_drink, home_store')
+          .eq('id', current.customer_id)
+          .single()
+        await supabase.from('orders').insert({
+          id: `ord_${campaignId}_${recipientId}`,
+          customer_id: current.customer_id,
+          amount: Number(orderValue) || 0,
+          drink: cust?.favorite_drink || 'Latte',
+          store: cust?.home_store || 'Daybreak',
+          ordered_at: new Date().toISOString(),
+          campaign_id: campaignId,
+        })
+      }
     }
   }
 
@@ -746,7 +829,18 @@ app.post('/api/campaigns/:id/receipt', async (req, res) => {
     const ordered = recs.filter((r) => r.state === 'Ordered').length
     const failed = recs.filter((r) => r.state === 'Failed').length
     const pendingSent = recs.filter((r) => r.state === 'Sent').length
-    const revenue = recs.reduce((sum, r) => sum + (r.order_value || 0), 0)
+
+    // Attributed revenue from the real orders table (source of truth: orders
+    // written with this campaign_id). Falls back to the recipient order_value
+    // sum if the orders table isn't available — same value, keeps the demo live.
+    let revenue = recs.reduce((sum, r) => sum + (r.order_value || 0), 0)
+    const { data: orderRows, error: ordErr } = await supabase
+      .from('orders')
+      .select('amount')
+      .eq('campaign_id', campaignId)
+    if (!ordErr && orderRows) {
+      revenue = orderRows.reduce((s: number, o: any) => s + (o.amount || 0), 0)
+    }
 
     // We only log a 100-recipient sample; extrapolate to the full audience.
     const { data: campaignInfo } = await supabase
@@ -861,5 +955,5 @@ app.get('/campaigns/:id/postmortem', async (req, res) => {
 app.listen(port, () => {
   console.log(`🚀 CRM Backend Server running at http://localhost:${port}`)
   console.log(`   Channel Service URL: ${CHANNEL_SERVICE_URL}`)
-  console.log(`   AI planning: ${LLM_ENABLED ? 'Claude (claude-opus-4-8)' : 'keyword fallback (set ANTHROPIC_API_KEY to enable)'}`)
+  console.log(`   AI planning: ${LLM_ENABLED ? `Groq (${LLM_MODEL})` : 'keyword fallback (set GROQ_API_KEY to enable)'}`)
 })
