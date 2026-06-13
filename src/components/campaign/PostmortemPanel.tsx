@@ -68,6 +68,20 @@ export function PostmortemPanel({ campaignId }: { campaignId: string }) {
               ))}
             </div>
 
+            {data.cohortCharacteristics && data.cohortCharacteristics.length > 0 && (
+              <div className="rounded-lg border border-border bg-surface-muted/50 p-4">
+                <div className="mb-3 text-sm font-medium text-foreground">Converter profile</div>
+                <ul className="space-y-2">
+                  {data.cohortCharacteristics.map((char) => (
+                    <li key={char.label} className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{char.label}</span>
+                      <span className="font-semibold text-foreground">{char.percentage}%</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <div className="rounded-xl border border-accent/40 bg-accent-soft/40 p-4">
               <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-accent-foreground">
                 <Sparkles className="h-3.5 w-3.5" />

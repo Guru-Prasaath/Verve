@@ -4,6 +4,8 @@ import * as dotenv from 'dotenv'
 import * as path from 'path'
 import { createClient } from '@supabase/supabase-js'
 import { planWithLLM, LLM_ENABLED, LLM_MODEL } from './agentPlanner'
+import { fetchFilteredCustomers, getTopCities } from './db/queries'
+import { checkAudienceOverlap, analyzeCohort } from './helpers/audience'
 
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '../.env') })
@@ -47,57 +49,6 @@ app.get('/', (req, res) => {
   `)
 })
 
-// --- Helper to execute filters against the database ---
-async function fetchFilteredCustomers(conditions: any[]) {
-  let query: any = supabase.from('customers').select('*')
-
-  for (const cond of conditions) {
-    let col = cond.field
-    if (col === 'last_order_days') col = 'days_since_last_order'
-    if (col === 'visit_frequency') col = 'frequency'
-    if (col === 'time_habit') col = 'time_habit'
-    if (col === 'lifetime_value') col = 'lifetime_value'
-    if (col === 'city') col = 'city'
-    if (col === 'favorite_drink') col = 'favorite_drink'
-
-    if (cond.op === '>') {
-      query = query.gt(col, cond.value)
-    } else if (cond.op === '<') {
-      query = query.lt(col, cond.value)
-    } else if (cond.op === '=') {
-      query = query.eq(col, cond.value)
-    }
-  }
-
-  const { data, error } = await query
-  if (error) {
-    console.error('Error fetching filtered customers:', error)
-    return []
-  }
-
-  // Map database snake_case back to frontend camelCase
-  return (data || []).map((c: any) => ({
-    id: c.id,
-    name: c.name,
-    city: c.city,
-    homeStore: c.home_store,
-    favoriteDrink: c.favorite_drink,
-    frequency: c.frequency,
-    timeHabit: c.time_habit,
-    lifetimeValue: c.lifetime_value,
-    daysSinceLastOrder: c.days_since_last_order,
-    totalOrders: c.total_orders,
-  }))
-}
-
-// Helper: Calculate top cities in an audience
-function getTopCities(customers: any[]): string[] {
-  const counts = new Map<string, number>()
-  for (const c of customers) counts.set(c.city, (counts.get(c.city) ?? 0) + 1)
-  return [...counts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([city]) => city)
-}
 
 // Helper: Fill templates
 function fillTemplate(body: string, c: any): string {
@@ -240,7 +191,7 @@ app.post('/audiences/preview', async (req, res) => {
   const filter = req.body
   const conditions = filter?.conditions || []
 
-  const members = await fetchFilteredCustomers(conditions)
+  const members = await fetchFilteredCustomers(supabase, conditions)
 
   res.json({
     count: members.length,
@@ -467,7 +418,7 @@ app.post('/agent/plan', async (req, res) => {
   }
 
   // --- Shared: apply the compiled filter to the real customer base ---
-  const audience = await fetchFilteredCustomers(conditions)
+  const audience = await fetchFilteredCustomers(supabase, conditions)
   const cities = getTopCities(audience)
   const avgGap =
     audience.length > 0
@@ -597,6 +548,16 @@ app.get('/campaigns/:id', async (req, res) => {
     orderValue: r.order_value,
   }))
 
+  const recipientIds = recipients.map(r => r.customerId)
+  const { overlapCount, overlapPercentage } = await checkAudienceOverlap(supabase, id, recipientIds)
+
+  const dedupWarning = overlapCount > 0 ? {
+    enabled: true,
+    overlapCount,
+    overlapPercentage,
+    message: `${overlapCount} recipient(s) (${overlapPercentage}%) are already in other active campaigns. Consider deduplicating to avoid over-messaging.`
+  } : null
+
   res.json({
     id: campaign.id,
     title: campaign.title,
@@ -612,6 +573,7 @@ app.get('/campaigns/:id', async (req, res) => {
     failures: campaign.failures,
     attributedRevenue: campaign.attributed_revenue,
     recipients,
+    dedupWarning,
   })
 })
 
@@ -652,7 +614,7 @@ app.post('/campaigns', async (req, res) => {
 
   // 1. Fetch audience customers matching conditions
   const conditions = plan.audience.filter.conditions
-  const customers = await fetchFilteredCustomers(conditions)
+  const customers = await fetchFilteredCustomers(supabase, conditions)
   
   // 2. Select up to 100 customers to record as individual recipients
   const sampleSize = Math.min(customers.length, 100)
@@ -956,21 +918,33 @@ app.get('/campaigns/:id/postmortem', async (req, res) => {
   const clickRate = m.opened > 0 ? Math.round((m.clicked / m.opened) * 100) : 0
   const orderRate = m.clicked > 0 ? Math.round((m.ordered / m.clicked) * 100) : 0
 
+  const { characteristics, converterCount } = await analyzeCohort(supabase, id)
+
+  const cohortInsight = characteristics.length > 0
+    ? `Of your ${converterCount} converters: ${characteristics.slice(0, 3).map(c => `${c.percentage}% are ${c.label.toLowerCase()}`).join(', ')}.`
+    : ''
+
+  const nextGoalSegment = characteristics.length > 0 && characteristics[0]
+    ? characteristics[0].label.toLowerCase()
+    : 'lapsed regulars'
+
   res.json({
     campaignId: id,
     headline: m.ordered > 0 ? 'Strong conversion from morning regulars' : 'Funnel statistics forming',
     retro: [
-      `“${campaign.title}” launched over ${campaign.channel} to ${campaign.audience_count.toLocaleString('en-IN')} recipients.`,
+      `”${campaign.title}” launched over ${campaign.channel} to ${campaign.audience_count.toLocaleString('en-IN')} recipients.`,
       `We observed a ${openRate}% delivery-to-open rate, with ${clickRate}% of readers tapping previews. Finally, ${orderRate}% of those clicks placed orders, driving ₹${(campaign.attributed_revenue || 0).toLocaleString('en-IN')} in total attributed sales.`,
+      ...(cohortInsight ? [cohortInsight] : []),
     ],
     highlights: [
       { label: 'Open Rate', value: `${openRate}%`, tone: openRate > 50 ? 'pass' : 'warn' },
       { label: 'Click Rate', value: `${clickRate}%`, tone: clickRate > 25 ? 'pass' : 'warn' },
       { label: 'Orders Placed', value: `${m.ordered} cups`, tone: 'pass' },
     ],
-    recommendedNextGoal: 'Win back lapsed regulars from Chennai and Bengaluru',
-    recommendedNextTitle: 'Target lapsed regulars',
-    recommendedRationale: 'Capitalize on this campaign momentum by targeting lapsed weekly regulars who visited Chennai or Bengaluru and haven\'t placed orders recently.',
+    cohortCharacteristics: characteristics,
+    recommendedNextGoal: `Target ${nextGoalSegment} with follow-up`,
+    recommendedNextTitle: `Follow-up: ${nextGoalSegment}`,
+    recommendedRationale: `Capitalize on this campaign momentum by targeting ${nextGoalSegment} who engaged but didn't convert yet, or repeat-target your best converting segment.`,
   })
 })
 

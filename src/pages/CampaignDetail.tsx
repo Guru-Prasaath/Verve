@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
+  AlertCircle,
   IndianRupee,
   MousePointerClick,
   Send,
@@ -68,13 +69,24 @@ export default function CampaignDetail() {
             <StatusPill status={data.status} />
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            “{data.goal}” · {formatNumber(data.audienceCount)} recipients
+            "{data.goal}" · {formatNumber(data.audienceCount)} recipients
           </p>
         </div>
         <Badge variant="neutral">{data.channel}</Badge>
       </div>
 
-      {/* headline metrics */}
+      {data.dedupWarning && (
+        <div className="mt-4 flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/5 p-4">
+          <AlertCircle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-foreground">Audience overlap detected</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {data.dedupWarning.message}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <MetricCard
           label="Attributed revenue"
@@ -98,14 +110,13 @@ export default function CampaignDetail() {
         <MetricCard
           label="Conversion"
           value={m.delivered ? `${convPct.toFixed(1)}%` : '—'}
-          sublabel="delivered → order"
+          sublabel="delivered to order"
           icon={ShoppingBag}
         />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         <div className="space-y-6">
-          {/* funnel */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle>Conversion funnel</CardTitle>
@@ -115,13 +126,12 @@ export default function CampaignDetail() {
                 <FunnelChart funnel={data.funnel} />
               ) : (
                 <p className="py-10 text-center text-sm text-muted-foreground">
-                  This campaign hasn’t sent yet — no funnel data.
+                  This campaign hasn't sent yet - no funnel data.
                 </p>
               )}
             </CardContent>
           </Card>
 
-          {/* recipients */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle>Per-recipient lifecycle</CardTitle>
@@ -162,7 +172,6 @@ export default function CampaignDetail() {
         </div>
 
         <div className="space-y-6">
-          {/* audience */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle>Audience</CardTitle>
@@ -175,7 +184,6 @@ export default function CampaignDetail() {
             </CardContent>
           </Card>
 
-          {/* failures */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle>Failure breakdown</CardTitle>

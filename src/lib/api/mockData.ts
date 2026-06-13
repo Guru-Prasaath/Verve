@@ -691,6 +691,7 @@ export function buildCampaignDetail(id: string): CampaignDetail | undefined {
     funnel: [
       { stage: 'Sent', count: m.sent },
       { stage: 'Delivered', count: m.delivered },
+      { stage: 'Read', count: Math.round(m.delivered * 0.57) },
       { stage: 'Opened', count: m.opened },
       { stage: 'Clicked', count: m.clicked },
       { stage: 'Order', count: m.ordered },
@@ -698,6 +699,7 @@ export function buildCampaignDetail(id: string): CampaignDetail | undefined {
     failures: makeFailures(m.sent, m.delivered),
     attributedRevenue: m.revenue,
     recipients: buildRecipients(def, c),
+    dedupWarning: null,
   }
 }
 
@@ -867,6 +869,7 @@ export function launchPlan(plan: CampaignPlan): Campaign {
     funnel: [
       { stage: 'Sent', count: m.sent },
       { stage: 'Delivered', count: m.delivered },
+      { stage: 'Read', count: Math.round(m.delivered * 0.57) },
       { stage: 'Opened', count: m.opened },
       { stage: 'Clicked', count: m.clicked },
       { stage: 'Order', count: m.ordered },
@@ -874,6 +877,7 @@ export function launchPlan(plan: CampaignPlan): Campaign {
     failures: makeFailures(m.sent, m.delivered),
     attributedRevenue: m.revenue,
     recipients,
+    dedupWarning: null,
   }
 
   RUNTIME_POSTMORTEMS[id] = {

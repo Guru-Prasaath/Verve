@@ -34,6 +34,7 @@ const RECIPIENT_MAP: Record<
 > = {
   Sent: 'neutral',
   Delivered: 'info',
+  Read: 'info',
   Opened: 'info',
   Clicked: 'warning',
   Ordered: 'success',
