@@ -1,8 +1,9 @@
 import { useNavigate } from 'react-router-dom'
-import { Plus, TrendingUp } from 'lucide-react'
+import { Plus, Rocket, TrendingUp } from 'lucide-react'
 import { PageHeader } from '@/components/common/PageHeader'
 import { StatusPill } from '@/components/common/StatusPill'
 import { MetricCard } from '@/components/common/MetricCard'
+import { EmptyState } from '@/components/common/EmptyState'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -56,22 +57,22 @@ export default function Campaigns() {
         <MetricCard label="Total campaigns" value={String(data?.length ?? 0)} />
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-border bg-surface">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Campaign</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Channel</TableHead>
-              <TableHead className="text-right">Audience</TableHead>
-              <TableHead className="text-right">Delivered</TableHead>
-              <TableHead className="text-right">Orders</TableHead>
-              <TableHead className="text-right">Revenue</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading &&
-              Array.from({ length: 4 }).map((_, i) => (
+      {isLoading ? (
+        <div className="mt-6 overflow-hidden rounded-xl border border-border bg-surface">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Campaign</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Channel</TableHead>
+                <TableHead className="text-right">Audience</TableHead>
+                <TableHead className="text-right">Delivered</TableHead>
+                <TableHead className="text-right">Orders</TableHead>
+                <TableHead className="text-right">Revenue</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {Array.from({ length: 4 }).map((_, i) => (
                 <TableRow key={i}>
                   {Array.from({ length: 7 }).map((__, j) => (
                     <TableCell key={j}>
@@ -80,44 +81,76 @@ export default function Campaigns() {
                   ))}
                 </TableRow>
               ))}
-            {data?.map((c) => {
-              const deliveredPct = percent(c.metrics.delivered, c.metrics.sent)
-              return (
-                <TableRow
-                  key={c.id}
-                  data-clickable="true"
-                  onClick={() => navigate(`/campaigns/${c.id}`)}
-                >
-                  <TableCell>
-                    <div className="font-medium text-foreground">{c.title}</div>
-                    <div className="text-xs text-muted-foreground">
-                      “{c.goal}”
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <StatusPill status={c.status} />
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="neutral">{c.channel}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatNumber(c.audienceCount)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums text-muted-foreground">
-                    {c.metrics.sent ? `${deliveredPct.toFixed(0)}%` : '—'}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {c.metrics.ordered ? formatNumber(c.metrics.ordered) : '—'}
-                  </TableCell>
-                  <TableCell className="text-right font-medium tabular-nums">
-                    {c.metrics.revenue ? formatINR(c.metrics.revenue) : '—'}
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
-      </div>
+            </TableBody>
+          </Table>
+        </div>
+      ) : !data || data.length === 0 ? (
+        <div className="mt-6">
+          <EmptyState
+            icon={Rocket}
+            title="No campaigns yet"
+            description="Start by creating your first campaign in the co-pilot. It will appear here with live performance metrics."
+            action={{
+              label: 'Create first campaign',
+              onClick: () => navigate('/'),
+            }}
+          />
+        </div>
+      ) : (
+        <div className="mt-6 overflow-hidden rounded-xl border border-border bg-surface">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Campaign</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Channel</TableHead>
+                <TableHead className="text-right">Audience</TableHead>
+                <TableHead className="text-right">Delivered</TableHead>
+                <TableHead className="text-right">Orders</TableHead>
+                <TableHead className="text-right">Revenue</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.map((c) => {
+                const deliveredPct = percent(c.metrics.delivered, c.metrics.sent)
+                return (
+                  <TableRow
+                    key={c.id}
+                    data-clickable="true"
+                    onClick={() => navigate(`/campaigns/${c.id}`)}
+                    className="cursor-pointer transition-colors hover:bg-surface-muted"
+                  >
+                    <TableCell>
+                      <div className="font-medium text-foreground">{c.title}</div>
+                      <div className="text-xs text-muted-foreground">
+                        "{c.goal}"
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <StatusPill status={c.status} />
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="neutral">{c.channel}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatNumber(c.audienceCount)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                      {c.metrics.sent ? `${deliveredPct.toFixed(0)}%` : 'N/A'}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {c.metrics.ordered ? formatNumber(c.metrics.ordered) : 'N/A'}
+                    </TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">
+                      {c.metrics.revenue ? formatINR(c.metrics.revenue) : 'N/A'}
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   )
 }

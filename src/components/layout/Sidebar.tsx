@@ -51,7 +51,7 @@ export function Sidebar() {
         <div className="rounded-lg bg-surface-muted p-3">
           <p className="text-xs font-medium text-foreground">AI Co-pilot</p>
           <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
-            Proposes campaigns. You approve every send — nothing goes out on its own.
+            Proposes campaigns. You approve every send - nothing goes out on its own.
           </p>
         </div>
       </div>

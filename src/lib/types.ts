@@ -164,7 +164,7 @@ export const CampaignSchema = z.object({
 export type Campaign = z.infer<typeof CampaignSchema>
 
 export const FunnelStageSchema = z.object({
-  stage: z.enum(['Sent', 'Delivered', 'Opened', 'Clicked', 'Order']),
+  stage: z.enum(['Sent', 'Delivered', 'Read', 'Opened', 'Clicked', 'Order']),
   count: z.number(),
 })
 export type FunnelStage = z.infer<typeof FunnelStageSchema>
@@ -178,6 +178,7 @@ export type FailureBreakdown = z.infer<typeof FailureBreakdownSchema>
 export const RECIPIENT_STATES = [
   'Sent',
   'Delivered',
+  'Read',
   'Opened',
   'Clicked',
   'Ordered',

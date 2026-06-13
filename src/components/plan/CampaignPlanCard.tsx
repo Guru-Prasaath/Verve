@@ -45,21 +45,20 @@ export function CampaignPlanCard({
 }) {
   return (
     <Card className="animate-in-up overflow-hidden">
-      {/* header — enhanced with gradient */}
-      <div className=”flex items-start justify-between gap-3 border-b border-border bg-gradient-to-br from-accent-soft/80 to-accent-soft/40 px-5 py-5 shadow-sm”>
+      <div className="flex items-start justify-between gap-3 border-b border-border bg-gradient-to-br from-accent-soft/80 to-accent-soft/40 px-5 py-5 shadow-sm">
         <div>
-          <div className=”flex items-center gap-2”>
-            <Sparkles className=”h-4 w-4 text-accent-foreground” />
-            <span className=”text-xs font-medium uppercase tracking-wide text-accent-foreground”>
-              ✨ AI Proposed Plan
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-accent-foreground" />
+            <span className="text-xs font-medium uppercase tracking-wide text-accent-foreground">
+              AI Proposed Plan
             </span>
           </div>
-          <h2 className=”mt-2 font-display text-2xl font-bold text-foreground”>
+          <h2 className="mt-2 font-display text-2xl font-bold text-foreground">
             {plan.title}
           </h2>
-          <p className=”mt-1 text-sm text-muted-foreground”>”{plan.goal}”</p>
+          <p className="mt-1 text-sm text-muted-foreground">"{plan.goal}"</p>
         </div>
-        <Badge variant=”primary” className=”shrink-0 font-semibold”>
+        <Badge variant="primary" className="shrink-0 font-semibold">
           Ready
         </Badge>
       </div>
@@ -104,10 +103,9 @@ export function CampaignPlanCard({
         </Section>
       </div>
 
-      {/* actions — prominent CTA + reassurance */}
       <div className="flex flex-col items-stretch gap-4 border-t border-border bg-gradient-to-r from-surface to-accent-soft/20 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs font-medium text-muted-foreground">
-          ✓ Human-in-the-loop. Nothing sends without your approval.
+          Human-in-the-loop. Nothing sends without your approval.
         </p>
         <div className="flex gap-3 sm:gap-2">
           <Button
@@ -126,7 +124,7 @@ export function CampaignPlanCard({
             className="flex-1 px-6 font-semibold shadow-lg transition-all duration-200 hover:shadow-xl disabled:opacity-60 sm:flex-none"
           >
             <Rocket className="h-4 w-4" />
-            {launching ? 'Launching…' : 'Launch campaign'}
+            {launching ? 'Launching...' : 'Launch campaign'}
           </Button>
         </div>
       </div>

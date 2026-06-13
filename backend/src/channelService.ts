@@ -44,7 +44,7 @@ interface Recipient {
 interface ReceiptPayload {
   recipientId: string
   customerId: string
-  state: 'Delivered' | 'Opened' | 'Clicked' | 'Ordered' | 'Failed'
+  state: 'Delivered' | 'Read' | 'Opened' | 'Clicked' | 'Ordered' | 'Failed'
   failureReason?: string | null
   orderValue?: number | null
 }
@@ -52,22 +52,44 @@ interface ReceiptPayload {
 const rand = () => Math.random()
 const jitter = (base: number, spread: number) => base + Math.random() * spread
 
-/** Fire one delivery receipt back to the CRM. Best-effort with error logging. */
-async function sendReceiptCallback(campaignId: string, payload: ReceiptPayload) {
-  try {
-    const res = await fetch(`${CRM_URL}/api/campaigns/${campaignId}/receipt`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-    if (!res.ok) {
-      console.error(
-        `[Channel] receipt rejected — campaign ${campaignId}, recipient ${payload.recipientId}: ${res.status}`
-      )
+/** Retry with exponential backoff. */
+async function sendReceiptCallbackWithRetry(
+  campaignId: string,
+  payload: ReceiptPayload,
+  maxAttempts: number = 3
+) {
+  let lastError: unknown
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await fetch(`${CRM_URL}/api/campaigns/${campaignId}/receipt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (res.ok) return
+      if (attempt === maxAttempts) {
+        console.error(
+          `[Channel] receipt final failure — campaign ${campaignId}, recipient ${payload.recipientId}: ${res.status}`
+        )
+      }
+    } catch (err) {
+      lastError = err
+      if (attempt < maxAttempts) {
+        const delayMs = Math.pow(2, attempt - 1) * 500
+        await new Promise((resolve) => setTimeout(resolve, delayMs))
+      }
     }
-  } catch (err) {
-    console.error('[Channel] network error sending receipt:', err)
   }
+  if (lastError) {
+    console.error('[Channel] receipt failed after retries:', lastError)
+  }
+}
+
+/** Fire one delivery receipt back to the CRM with retries. */
+function sendReceiptCallback(campaignId: string, payload: ReceiptPayload) {
+  sendReceiptCallbackWithRetry(campaignId, payload).catch((err) => {
+    console.error('[Channel] uncaught error in receipt callback:', err)
+  })
 }
 
 /** Simulate the full engagement funnel for a single recipient. */
@@ -88,7 +110,7 @@ function simulateRecipient(campaignId: string, rec: Recipient) {
     return
   }
 
-  // Delivered → maybe Opened → maybe Clicked → maybe Ordered, each with delay.
+  // Delivered → maybe Read → maybe Opened → maybe Clicked → maybe Ordered
   setTimeout(() => {
     sendReceiptCallback(campaignId, {
       recipientId: rec.id,
@@ -101,28 +123,36 @@ function simulateRecipient(campaignId: string, rec: Recipient) {
       sendReceiptCallback(campaignId, {
         recipientId: rec.id,
         customerId: rec.customerId,
-        state: 'Opened',
+        state: 'Read',
       })
 
-      if (rand() >= P_CLICK) return
       setTimeout(() => {
         sendReceiptCallback(campaignId, {
           recipientId: rec.id,
           customerId: rec.customerId,
-          state: 'Clicked',
+          state: 'Opened',
         })
 
-        if (rand() >= P_ORDER) return
+        if (rand() >= P_CLICK) return
         setTimeout(() => {
-          const orderValue = AVG_ORDER_VALUE + Math.round((rand() - 0.5) * 200)
           sendReceiptCallback(campaignId, {
             recipientId: rec.id,
             customerId: rec.customerId,
-            state: 'Ordered',
-            orderValue,
+            state: 'Clicked',
           })
-        }, jitter(1000, 2000))
-      }, jitter(800, 1500))
+
+          if (rand() >= P_ORDER) return
+          setTimeout(() => {
+            const orderValue = AVG_ORDER_VALUE + Math.round((rand() - 0.5) * 200)
+            sendReceiptCallback(campaignId, {
+              recipientId: rec.id,
+              customerId: rec.customerId,
+              state: 'Ordered',
+              orderValue,
+            })
+          }, jitter(1000, 2000))
+        }, jitter(800, 1500))
+      }, jitter(300, 600))
     }, jitter(600, 1200))
   }, jitter(400, 1000))
 }

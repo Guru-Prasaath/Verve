@@ -687,14 +687,33 @@ app.post('/campaigns', async (req, res) => {
     })),
   }
 
-  // Call the separate Channel Service's send API (fire-and-forget — it ACKs
-  // immediately and streams delivery receipts back to our webhook).
-  fetch(`${CHANNEL_SERVICE_URL}/send`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(sendBody),
-  }).catch((err) => {
-    console.error('[CRM Backend] Failed to reach Channel Service dispatch API:', err)
+  // Call the separate Channel Service's send API with retries (fire-and-forget —
+  // it ACKs immediately and streams delivery receipts back to our webhook).
+  async function sendToChannelWithRetry(maxAttempts = 3) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const res = await fetch(`${CHANNEL_SERVICE_URL}/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(sendBody),
+        })
+        if (res.ok || res.status === 202) return
+        if (attempt < maxAttempts) {
+          const delayMs = Math.pow(2, attempt - 1) * 500
+          await new Promise((resolve) => setTimeout(resolve, delayMs))
+        }
+      } catch (err) {
+        if (attempt === maxAttempts) {
+          console.error('[CRM Backend] Failed to reach Channel Service after retries:', err)
+        } else {
+          const delayMs = Math.pow(2, attempt - 1) * 500
+          await new Promise((resolve) => setTimeout(resolve, delayMs))
+        }
+      }
+    }
+  }
+  sendToChannelWithRetry().catch((err) => {
+    console.error('[CRM Backend] Uncaught error sending to channel service:', err)
   })
 
   // Finalizer: receipts stop arriving once engagement settles, so the last
@@ -728,9 +747,10 @@ app.post('/campaigns', async (req, res) => {
 const STATE_RANK: Record<string, number> = {
   Sent: 0,
   Delivered: 1,
-  Opened: 2,
-  Clicked: 3,
-  Ordered: 4,
+  Read: 2,
+  Opened: 3,
+  Clicked: 4,
+  Ordered: 5,
 }
 // Window after launch during which we keep polling for trickling engagement
 // events before declaring a campaign Done. (Production analog: an attribution
@@ -823,7 +843,8 @@ app.post('/api/campaigns/:id/receipt', async (req, res) => {
 
   if (!fErr && recs) {
     const totalCount = recs.length
-    const delivered = recs.filter((r) => ['Delivered', 'Opened', 'Clicked', 'Ordered'].includes(r.state)).length
+    const delivered = recs.filter((r) => ['Delivered', 'Read', 'Opened', 'Clicked', 'Ordered'].includes(r.state)).length
+    const read = recs.filter((r) => ['Read', 'Opened', 'Clicked', 'Ordered'].includes(r.state)).length
     const opened = recs.filter((r) => ['Opened', 'Clicked', 'Ordered'].includes(r.state)).length
     const clicked = recs.filter((r) => ['Clicked', 'Ordered'].includes(r.state)).length
     const ordered = recs.filter((r) => r.state === 'Ordered').length
@@ -855,6 +876,7 @@ app.post('/api/campaigns/:id/receipt', async (req, res) => {
     const finalMetrics = {
       sent: audienceSize,
       delivered: Math.round(delivered * scale),
+      read: Math.round(read * scale),
       opened: Math.round(opened * scale),
       clicked: Math.round(clicked * scale),
       ordered: Math.round(ordered * scale),
@@ -902,6 +924,7 @@ app.post('/api/campaigns/:id/receipt', async (req, res) => {
         funnel: [
           { stage: 'Sent', count: finalMetrics.sent },
           { stage: 'Delivered', count: finalMetrics.delivered },
+          { stage: 'Read', count: finalMetrics.read },
           { stage: 'Opened', count: finalMetrics.opened },
           { stage: 'Clicked', count: finalMetrics.clicked },
           { stage: 'Order', count: finalMetrics.ordered },

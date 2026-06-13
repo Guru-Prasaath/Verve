@@ -47,7 +47,7 @@ export default function Copilot() {
             ...t,
             {
               role: 'agent',
-              text: `Here’s a plan for “${p.title}” — ${p.audience.count.toLocaleString(
+              text: `Here's a plan for "${p.title}" - ${p.audience.count.toLocaleString(
                 'en-IN'
               )} customers via ${p.recommendedChannel}.`,
             },
@@ -84,7 +84,6 @@ export default function Copilot() {
     else submitRefinement(input)
   }
 
-  // Pre-fill from a postmortem / audience "Create this campaign" hand-off.
   const prefill = (location.state as { goal?: string } | null)?.goal
   const prefilled = useRef(false)
   useEffect(() => {
@@ -93,8 +92,7 @@ export default function Copilot() {
       submitGoal(prefill)
       navigate(location.pathname, { replace: true, state: null })
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prefill])
+  }, [prefill, navigate, location.pathname])
 
   function onLaunch() {
     if (!plan) return
@@ -104,38 +102,37 @@ export default function Copilot() {
   }
 
   return (
-    <div className=”mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-10”>
+    <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-10">
       {!started && (
-        <div className=”mb-12 text-center”>
-          <div className=”mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-primary text-primary-foreground shadow-lg”>
-            <Coffee className=”h-8 w-8” />
+        <div className="mb-12 text-center">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-primary text-primary-foreground shadow-lg">
+            <Coffee className="h-8 w-8" />
           </div>
-          <h1 className=”font-display text-4xl font-semibold tracking-tight text-foreground sm:text-5xl”>
+          <h1 className="font-display text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
             What should we run next?
           </h1>
-          <p className=”mx-auto mt-3 max-w-xl text-base text-muted-foreground”>
-            Describe a goal in plain English. Your AI co-pilot proposes a complete campaign —
-            audience, message, channel and guardrails — for you to approve.
+          <p className="mx-auto mt-3 max-w-xl text-base text-muted-foreground">
+            Describe a goal in plain English. Your AI co-pilot proposes a complete campaign - audience, message, channel and guardrails - for you to approve.
           </p>
         </div>
       )}
 
       {/* conversation transcript */}
       {turns.length > 0 && (
-        <div className=”mb-8 space-y-3”>
+        <div className="mb-8 space-y-3">
           {turns.map((t, i) =>
             t.role === 'user' ? (
-              <div key={i} className=”flex justify-end”>
-                <div className=”max-w-[85%] rounded-2xl rounded-tr-sm bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm”>
+              <div key={i} className="flex justify-end">
+                <div className="max-w-xs rounded-2xl rounded-tr-sm bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm sm:max-w-sm">
                   {t.text}
                 </div>
               </div>
             ) : (
-              <div key={i} className=”flex items-start gap-2.5”>
-                <div className=”mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent-foreground shadow-sm”>
-                  <Sparkles className=”h-4 w-4” />
+              <div key={i} className="flex items-start gap-2.5">
+                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent-foreground shadow-sm">
+                  <Sparkles className="h-4 w-4" />
                 </div>
-                <div className=”max-w-[85%] rounded-2xl rounded-tl-sm bg-surface-muted px-4 py-2.5 text-sm text-foreground shadow-sm”>
+                <div className="max-w-xs rounded-2xl rounded-tl-sm bg-surface-muted px-4 py-2.5 text-sm text-foreground shadow-sm sm:max-w-sm">
                   {t.text}
                 </div>
               </div>
@@ -146,12 +143,12 @@ export default function Copilot() {
 
       {/* thinking / plan */}
       {generate.isPending && (
-        <div className=”mb-8”>
+        <div className="mb-8">
           <ThinkingShimmer />
         </div>
       )}
       {plan && !generate.isPending && (
-        <div className=”mb-8”>
+        <div className="mb-8">
           <CampaignPlanCard
             plan={plan}
             launching={launch.isPending}
@@ -161,46 +158,46 @@ export default function Copilot() {
         </div>
       )}
 
-      {/* hero input area — make it prominent & sticky */}
-      <form onSubmit={handleSubmit} className=”relative”>
-        <div className=”space-y-3”>
+      {/* hero input area */}
+      <form onSubmit={handleSubmit} className="relative">
+        <div className="space-y-3">
           {/* main input */}
-          <div className=”input-focus-glow rounded-2xl border-2 border-border-strong bg-surface shadow-md transition-all duration-300 focus-within:border-accent focus-within:shadow-lg”>
-            <div className=”flex items-center gap-3 p-4 sm:p-5”>
-              <Sparkles className=”h-5 w-5 shrink-0 text-accent” />
+          <div className="input-focus-glow rounded-2xl border-2 border-border-strong bg-surface shadow-md transition-all duration-300 focus-within:border-accent focus-within:shadow-lg">
+            <div className="flex items-center gap-3 p-4 sm:p-5">
+              <Sparkles className="h-5 w-5 shrink-0 text-accent" />
               <input
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={
                   plan
-                    ? 'Refine the plan — e.g. “make it shorter”, “only Bengaluru”…'
-                    : 'Describe your campaign goal…'
+                    ? 'Refine the plan - e.g. shorter, Bengaluru only...'
+                    : 'Describe your campaign goal...'
                 }
-                className=”flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground sm:text-lg”
+                className="flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground sm:text-lg"
               />
               <Button
-                type=”submit”
-                variant=”accent”
+                type="submit"
+                variant="accent"
                 disabled={generate.isPending || !input.trim()}
-                className=”shrink-0 px-6 py-2.5 font-semibold shadow-md transition-all duration-200 hover:shadow-lg disabled:opacity-60”
-                aria-label=”Generate plan”
+                className="shrink-0 px-6 py-2.5 font-semibold shadow-md transition-all duration-200 hover:shadow-lg disabled:opacity-60"
+                aria-label="Generate plan"
               >
-                <ArrowUp className=”mr-1.5 h-4 w-4” />
-                <span className=”hidden sm:inline”>Generate</span>
+                <ArrowUp className="mr-1.5 h-4 w-4" />
+                <span className="hidden sm:inline">Generate</span>
               </Button>
             </div>
           </div>
 
-          {/* example chips — enhanced with affordance */}
-          <div className=”flex flex-wrap gap-2”>
+          {/* example chips */}
+          <div className="flex flex-wrap gap-2">
             {(plan ? REFINE_HINTS : EXAMPLES).map((c) => (
               <button
                 key={c}
-                type=”button”
+                type="button"
                 onClick={() => (plan ? submitRefinement(c) : submitGoal(c))}
                 disabled={generate.isPending}
-                className=”chip-interactive rounded-full border border-border-strong bg-surface px-4 py-2 text-xs font-medium text-foreground disabled:opacity-50 sm:text-sm”
+                className="chip-interactive rounded-full border border-border-strong bg-surface px-4 py-2 text-xs font-medium text-foreground disabled:opacity-50 sm:text-sm"
               >
                 {c}
               </button>
