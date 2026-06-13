@@ -1,6 +1,6 @@
-# Pulse — AI-native Mini CRM for Daybreak Coffee
+# Verve — AI-native Mini CRM for Daybreak Coffee
 
-Pulse is an **agentic campaign co-pilot** for the Daybreak Coffee marketing team.
+Verve is an **agentic campaign co-pilot** for the Daybreak Coffee marketing team.
 A marketer states a goal in plain English; the AI proposes a complete campaign plan
 (audience + per-channel message + recommended channel + guardrails); the human approves;
 the campaign runs; results stream into a dashboard; the AI writes a postmortem and
@@ -71,7 +71,22 @@ is involved — replace the marked call site to add one.
 - **Customers** (`/customers`) — searchable table.
 - **Audiences** (`/audiences`) — saved segments with persona + live count.
 
+## System Design & Backend Architecture (Simulated Loop)
+
+While this repository contains the high-fidelity frontend, the data layer in `src/lib/api/mockData.ts` is explicitly architected to simulate Xeno's mandatory two-service, callback-driven communication loop end-to-end.
+
+### The Callback Lifecycle Workflow
+1. **Trigger:** When `useLaunchCampaign` is triggered via the Co-pilot, the frontend calls our API client (`POST /campaigns`).
+2. **Dispatch:** In a production environment, the Express CRM backend routes this to an isolated, stubbed **Channel Service** via a `POST /send` API payload containing recipient metadata, channel choice, and the personalized message.
+3. **Asynchronous Simulation:** The mock store (`mockData.ts`) mimics this asynchronous behavior. Instead of instantly completing, it registers a delayed state engine that simulates real-world delivery latency.
+4. **The Webhook Callback:** After a simulated delay, it executes a callback simulating an HTTP POST request back to the CRM's receipt API (`POST /campaigns/:id/receipt`), streaming progressive status updates: `Sent` ➔ `Delivered` ➔ `Opened`/`Read` ➔ `Clicked` (or `Failed`).
+5. **UI Update:** The React application UI updates automatically via TanStack Query refetching, updating the status pills, funnel charts, and failure tracking in real time.
+
+### Scalability Tradeoffs for Production
+- **Message Queues:** At production scale (e.g., dispatching to 100,000+ shoppers), making direct, synchronous HTTP requests to a channel service would bottleneck the server. We would replace the direct API call with an asynchronous message broker like **RabbitMQ** or **AWS SQS** to handle high-throughput queueing.
+- **Idempotency & Race Conditions:** Out-of-order delivery notifications (e.g., a network delay causing an `Opened` callback to arrive before a `Delivered` callback) are handled by validating incoming event timestamps against a strict database state machine, ensuring older states never overwrite newer engagement metrics.
+
 ## Out of scope
 
-Auth, real messaging/LLM, the Express backend, channel service, scheduling, A/B testing,
+Auth, real messaging/LLM, scheduling, A/B testing,
 billing, settings.

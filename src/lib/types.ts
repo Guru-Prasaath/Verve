@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 /*
-  Shared domain types for Pulse. Every API response is validated against the
+  Shared domain types for Verve. Every API response is validated against the
   matching Zod schema in the api client, so the mock layer and the future
   Express backend are guaranteed to agree on shape. Types are inferred from
   the schemas — never hand-written separately.

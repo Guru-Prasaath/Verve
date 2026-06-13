@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 /*
-  Pulse design system — "Daybreak Coffee"
+  Verve design system — "Daybreak Coffee"
   Espresso (#5A3A22) + Amber (#E0A458) accent on a warm-neutral base.
   Tokens are defined as raw CSS custom properties and surfaced to Tailwind
   utilities via @theme inline, so dark mode can later be added by overriding

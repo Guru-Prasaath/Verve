@@ -18,7 +18,7 @@ export function Sidebar() {
         </div>
         <div className="leading-tight">
           <div className="font-display text-lg font-semibold text-foreground">
-            Pulse
+            Verve
           </div>
           <div className="-mt-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             Daybreak Coffee
