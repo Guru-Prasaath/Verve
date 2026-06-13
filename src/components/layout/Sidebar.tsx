@@ -26,7 +26,7 @@ export function Sidebar() {
         </div>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-1 px-3 py-3">
+      <nav className="flex flex-1 flex-col gap-1.5 px-3 py-4">
         {NAV.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
@@ -34,14 +34,14 @@ export function Sidebar() {
             end={end}
             className={({ isActive }) =>
               cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                'relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
                 isActive
-                  ? 'bg-accent-soft text-accent-foreground'
+                  ? 'bg-gradient-to-r from-accent-soft to-accent-soft/60 text-accent-foreground shadow-sm before:absolute before:left-0 before:top-1/2 before:h-5 before:w-1 before:-translate-y-1/2 before:rounded-r before:bg-primary before:transition-all'
                   : 'text-muted-foreground hover:bg-surface-muted hover:text-foreground'
               )
             }
           >
-            <Icon className="h-4 w-4" />
+            <Icon className="h-4.5 w-4.5" />
             {label}
           </NavLink>
         ))}

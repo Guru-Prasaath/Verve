@@ -16,10 +16,11 @@ function Section({
   title: string
   children: React.ReactNode
 }) {
+  const animationClass = `animate-section-${step}`
   return (
-    <section className="px-5 py-5">
+    <section className={`px-5 py-5 ${animationClass}`}>
       <div className="mb-3 flex items-center gap-2.5">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/80 text-[11px] font-semibold text-primary-foreground shadow-sm">
           {step}
         </span>
         <h3 className="text-sm font-semibold uppercase tracking-wide text-foreground">
@@ -44,22 +45,22 @@ export function CampaignPlanCard({
 }) {
   return (
     <Card className="animate-in-up overflow-hidden">
-      {/* header */}
-      <div className="flex items-start justify-between gap-3 border-b border-border bg-gradient-to-br from-accent-soft/60 to-surface px-5 py-4">
+      {/* header — enhanced with gradient */}
+      <div className=”flex items-start justify-between gap-3 border-b border-border bg-gradient-to-br from-accent-soft/80 to-accent-soft/40 px-5 py-5 shadow-sm”>
         <div>
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-accent-foreground" />
-            <span className="text-xs font-medium uppercase tracking-wide text-accent-foreground">
-              Proposed campaign plan
+          <div className=”flex items-center gap-2”>
+            <Sparkles className=”h-4 w-4 text-accent-foreground” />
+            <span className=”text-xs font-medium uppercase tracking-wide text-accent-foreground”>
+              ✨ AI Proposed Plan
             </span>
           </div>
-          <h2 className="mt-1 font-display text-xl font-semibold text-foreground">
+          <h2 className=”mt-2 font-display text-2xl font-bold text-foreground”>
             {plan.title}
           </h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">“{plan.goal}”</p>
+          <p className=”mt-1 text-sm text-muted-foreground”>”{plan.goal}”</p>
         </div>
-        <Badge variant="primary" className="shrink-0">
-          Draft
+        <Badge variant=”primary” className=”shrink-0 font-semibold”>
+          Ready
         </Badge>
       </div>
 
@@ -103,17 +104,27 @@ export function CampaignPlanCard({
         </Section>
       </div>
 
-      {/* actions */}
-      <div className="flex flex-col-reverse items-stretch gap-2 border-t border-border bg-surface-muted/40 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs text-muted-foreground">
-          Human-in-the-loop: nothing sends until you approve.
+      {/* actions — prominent CTA + reassurance */}
+      <div className="flex flex-col items-stretch gap-4 border-t border-border bg-gradient-to-r from-surface to-accent-soft/20 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs font-medium text-muted-foreground">
+          ✓ Human-in-the-loop. Nothing sends without your approval.
         </p>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={onRefineClick} disabled={launching}>
+        <div className="flex gap-3 sm:gap-2">
+          <Button
+            variant="outline"
+            onClick={onRefineClick}
+            disabled={launching}
+            className="transition-all duration-200 hover:shadow-md"
+          >
             <Wand2 className="h-4 w-4" />
             Refine
           </Button>
-          <Button variant="accent" onClick={onLaunch} disabled={launching}>
+          <Button
+            variant="accent"
+            onClick={onLaunch}
+            disabled={launching}
+            className="flex-1 px-6 font-semibold shadow-lg transition-all duration-200 hover:shadow-xl disabled:opacity-60 sm:flex-none"
+          >
             <Rocket className="h-4 w-4" />
             {launching ? 'Launching…' : 'Launch campaign'}
           </Button>

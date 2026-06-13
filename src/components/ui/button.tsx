@@ -3,19 +3,19 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0',
   {
     variants: {
       variant: {
         primary:
-          'bg-primary text-primary-foreground hover:bg-primary-hover shadow-sm',
+          'bg-primary text-primary-foreground hover:bg-primary-hover hover:shadow-md active:scale-95 shadow-sm',
         accent:
-          'bg-accent text-accent-foreground hover:bg-accent-hover shadow-sm',
+          'bg-accent text-accent-foreground hover:bg-accent-hover hover:shadow-lg active:scale-95 shadow-md',
         outline:
-          'border border-border-strong bg-surface text-foreground hover:bg-surface-muted',
-        ghost: 'text-foreground hover:bg-surface-muted',
+          'border border-border-strong bg-surface text-foreground hover:bg-surface-muted hover:border-accent hover:shadow-md active:scale-95',
+        ghost: 'text-foreground hover:bg-surface-muted active:scale-95',
         subtle:
-          'bg-surface-muted text-foreground hover:bg-accent-soft',
+          'bg-surface-muted text-foreground hover:bg-accent-soft hover:shadow-sm active:scale-95',
       },
       size: {
         sm: 'h-8 px-3 text-xs',

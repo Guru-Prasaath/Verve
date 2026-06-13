@@ -13,6 +13,12 @@ This is a **full-stack** project:
 - **CRM backend** (`/backend`, `server.ts`) — Express + Supabase/Postgres. Ingests data, segments shoppers, exposes the send API, ingests delivery receipts, surfaces performance.
 - **Channel service** (`/backend`, `channelService.ts`) — a **separate** Express process that stubs a messaging provider: it simulates the delivery lifecycle and calls back into the CRM. No real provider is integrated.
 
+> **Repository layout (monorepo).** Frontend and backend live in this single repo:
+> the **frontend** is the repo root (Vite app — `src/`, `package.json`, `index.html`),
+> and the **backend** is in [`/backend`](backend) (the Express CRM `server.ts` + the
+> separate `channelService.ts`). If you arrived from two submission links, both point
+> here: frontend → repo root, backend → [`/backend`](backend).
+
 ## Architecture — the two-service, callback-driven loop
 
 ```

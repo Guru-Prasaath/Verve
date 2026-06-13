@@ -131,7 +131,7 @@ body {
 @keyframes fade-in-up {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -139,7 +139,60 @@ body {
   }
 }
 .animate-in-up {
-  animation: fade-in-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* staggered reveal for plan card sections */
+@keyframes fade-in-up-stagger {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-section-1 {
+  animation: fade-in-up-stagger 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both;
+}
+.animate-section-2 {
+  animation: fade-in-up-stagger 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+}
+.animate-section-3 {
+  animation: fade-in-up-stagger 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+}
+.animate-section-4 {
+  animation: fade-in-up-stagger 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+}
+
+/* chip / button hover effects */
+@keyframes chip-hover {
+  to {
+    transform: translateY(-2px);
+  }
+}
+.chip-interactive {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.chip-interactive:hover:not(:disabled) {
+  animation: chip-hover 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: var(--accent);
+  background-color: var(--accent-soft);
+}
+
+/* input focus glow */
+@keyframes input-glow {
+  from {
+    box-shadow: 0 0 0 0 rgba(224, 164, 88, 0.4);
+  }
+  to {
+    box-shadow: 0 0 0 8px rgba(224, 164, 88, 0);
+  }
+}
+.input-focus-glow:focus-within {
+  animation: input-glow 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes pulse-dot {
