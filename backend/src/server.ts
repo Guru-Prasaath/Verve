@@ -577,6 +577,26 @@ app.get('/campaigns/:id', async (req, res) => {
   })
 })
 
+app.delete('/campaigns/:id', async (req, res) => {
+  const { id } = req.params
+
+  const { error: recipientErr } = await supabase
+    .from('recipients')
+    .delete()
+    .eq('campaign_id', id)
+
+  const { error: campaignErr } = await supabase
+    .from('campaigns')
+    .delete()
+    .eq('id', id)
+
+  if (campaignErr) {
+    return res.status(500).json({ error: 'Failed to delete campaign' })
+  }
+
+  res.json({ success: true, message: 'Campaign deleted' })
+})
+
 // 8. POST /campaigns — launch a campaign (exposes CRM Send API)
 app.post('/campaigns', async (req, res) => {
   const plan = req.body

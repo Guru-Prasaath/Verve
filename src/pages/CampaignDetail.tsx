@@ -1,7 +1,9 @@
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import {
   ArrowLeft,
   AlertCircle,
+  Trash2,
   IndianRupee,
   MousePointerClick,
   Send,
@@ -28,7 +30,29 @@ import { formatINR, formatNumber, percent } from '@/lib/utils'
 
 export default function CampaignDetail() {
   const { id = '' } = useParams()
+  const navigate = useNavigate()
   const { data, isLoading } = useCampaign(id)
+  const [deleting, setDeleting] = useState(false)
+
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this campaign? This cannot be undone.')) {
+      return
+    }
+
+    setDeleting(true)
+    try {
+      const response = await fetch(`/api/campaigns/${id}`, { method: 'DELETE' })
+      if (response.ok) {
+        navigate('/campaigns')
+      } else {
+        alert('Failed to delete campaign')
+        setDeleting(false)
+      }
+    } catch (err) {
+      alert('Error deleting campaign')
+      setDeleting(false)
+    }
+  }
 
   if (isLoading || !data) {
     return (
@@ -72,7 +96,17 @@ export default function CampaignDetail() {
             "{data.goal}" · {formatNumber(data.audienceCount)} recipients
           </p>
         </div>
-        <Badge variant="neutral">{data.channel}</Badge>
+        <div className="flex items-center gap-3">
+          <Badge variant="neutral">{data.channel}</Badge>
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="inline-flex items-center gap-2 rounded-md bg-danger/10 px-3 py-2 text-sm text-danger hover:bg-danger/20 transition-colors disabled:opacity-50"
+          >
+            <Trash2 className="h-4 w-4" />
+            {deleting ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
       </div>
 
       {data.dedupWarning && (
