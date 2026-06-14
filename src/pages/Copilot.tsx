@@ -145,6 +145,10 @@ export default function Copilot() {
       {generate.isPending && (
         <div className="mb-8">
           <ThinkingShimmer />
+          <div className="mt-4 rounded-lg border border-accent/30 bg-accent/5 px-4 py-3 text-sm text-muted-foreground">
+            <p className="font-medium text-foreground">⏳ Generating campaign plan...</p>
+            <p className="mt-1">This may take 30-60 seconds on first load (backend initialization). Thank you for your patience!</p>
+          </div>
         </div>
       )}
       {plan && !generate.isPending && (
@@ -205,6 +209,14 @@ export default function Copilot() {
           </div>
         </div>
       </form>
+
+      {/* Free tier notice */}
+      <div className="mt-12 border-t border-border pt-8 text-center text-xs text-muted-foreground sm:text-sm">
+        <p className="mb-2 font-medium">Free Tier Note</p>
+        <p>
+          This app runs on Render's free tier. Services spin down after 15 minutes of inactivity, causing first requests to take 30-60 seconds. This is a one-time delay per 15 minutes of inactivity.
+        </p>
+      </div>
     </div>
   )
 }

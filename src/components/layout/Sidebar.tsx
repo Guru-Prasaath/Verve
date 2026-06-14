@@ -11,7 +11,7 @@ const NAV = [
 
 export function Sidebar() {
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-surface md:flex">
+    <aside className="w-48 shrink-0 flex-col border-r border-border bg-surface sm:w-60 flex">
       <div className="flex h-16 items-center gap-2.5 px-5">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
           <Coffee className="h-4.5 w-4.5" strokeWidth={2.2} />
